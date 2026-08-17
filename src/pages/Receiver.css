@@ -1,0 +1,565 @@
+.receiver-page {
+  min-height: 100vh;
+
+  background: #f5f7fb;
+
+  color: #172033;
+}
+
+
+/* =========================
+   HEADER
+========================= */
+
+.receiver-header {
+  height: 70px;
+
+  background: white;
+
+  border-bottom:
+    1px solid #e5e7eb;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  padding: 0 7%;
+}
+
+
+.receiver-logo {
+  font-size: 23px;
+
+  font-weight: 800;
+}
+
+.receiver-logo span {
+  color: #2563eb;
+}
+
+
+.receiver-status {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  color: #64748b;
+
+  font-size: 14px;
+}
+
+
+.receiver-dot {
+  width: 9px;
+
+  height: 9px;
+
+  border-radius: 50%;
+
+  background: #22c55e;
+}
+
+
+.receiver-dot.connecting {
+  background: #f59e0b;
+}
+
+
+/* =========================
+   MAIN
+========================= */
+
+.receiver-main {
+  width: 92%;
+
+  max-width: 850px;
+
+  margin: auto;
+}
+
+
+/* =========================
+   HEADING
+========================= */
+
+.receiver-heading {
+  text-align: center;
+
+  padding:
+    55px 0 30px;
+}
+
+
+.receiver-heading h1 {
+  margin:0 0 10px;
+  color :black;
+  font-size: 38px;
+}
+
+
+.receiver-heading p {
+  margin: 0;
+
+  color: #64748b;
+}
+
+
+/* =========================
+   CARD
+========================= */
+
+.receiver-card {
+  background: white;
+
+  border:
+    1px solid #e5e7eb;
+
+  border-radius: 20px;
+
+  padding: 35px;
+
+  box-shadow:
+    0 12px 35px
+    rgba(0, 0, 0, .05);
+
+  text-align: center;
+}
+
+
+.receiver-card-icon {
+  width: 60px;
+
+  height: 60px;
+
+  margin: auto;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  background: #eff6ff;
+
+  border-radius: 14px;
+
+  font-size: 30px;
+}
+
+
+.receiver-card h2 {
+  margin:20px 0 7px;
+  color :black;
+  font-size: 23px;
+}
+
+
+.receiver-description {
+  color: #64748b;
+
+  margin:
+    0 auto 30px;
+
+  max-width: 500px;
+
+  line-height: 1.5;
+}
+
+
+/* =========================
+   INPUT
+========================= */
+
+.input-group {
+  text-align: left;
+}
+
+
+.input-group label {
+  display: block;
+
+  font-size: 11px;
+
+  font-weight: 700;
+
+  color: #64748b;
+
+  letter-spacing: 1px;
+
+  margin-bottom: 8px;
+}
+
+
+.input-group input {
+  width: 100%;
+
+  padding: 16px;
+
+  border:
+    1px solid #d1d5db;
+
+  border-radius: 10px;
+
+  outline: none;
+
+  font-size: 17px;
+
+  text-align: center;
+
+  letter-spacing: 2px;
+}
+
+
+.input-group input:focus {
+  border-color: #2563eb;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(37, 99, 235, .1);
+}
+
+
+.input-group input:disabled {
+  background: #f8fafc;
+}
+
+
+/* =========================
+   BUTTONS
+========================= */
+
+.connect-button,
+.cancel-button {
+  width: 100%;
+
+  margin-top: 15px;
+
+  padding: 15px;
+
+  border: none;
+
+  border-radius: 10px;
+
+  color: white;
+
+  font-size: 16px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+
+.connect-button {
+  background: #2563eb;
+}
+
+
+.connect-button:hover {
+  background: #1d4ed8;
+}
+
+
+.cancel-button {
+  background: #dc2626;
+}
+
+
+.cancel-button:hover {
+  background: #b91c1c;
+}
+
+
+/* =========================
+   PERMISSION
+========================= */
+
+.permission-box {
+  margin-top: 25px;
+
+  padding: 17px;
+
+  display: flex;
+
+  gap: 12px;
+
+  text-align: left;
+
+  background: #eff6ff;
+
+  border-radius: 12px;
+}
+
+
+.permission-icon {
+  font-size: 22px;
+}
+
+
+.permission-box strong {
+  font-size: 14px;
+
+  color: #1e3a8a;
+}
+
+
+.permission-box p {
+  margin:
+    5px 0 0;
+
+  color: #64748b;
+
+  font-size: 13px;
+
+  line-height: 1.5;
+}
+
+
+/* =========================
+   FEATURES
+========================= */
+
+.receiver-features {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, 1fr);
+
+  gap: 15px;
+
+  margin-top: 20px;
+}
+
+
+.feature {
+  background: white;
+
+  border:
+    1px solid #e5e7eb;
+
+  border-radius: 15px;
+
+  padding: 20px;
+
+  display: flex;
+
+  gap: 12px;
+}
+
+
+.feature-icon {
+  width: 42px;
+
+  height: 42px;
+
+  flex-shrink: 0;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  background: #f8fafc;
+
+  border-radius: 10px;
+
+  font-size: 20px;
+}
+
+
+.feature strong {
+  display: block;
+
+  font-size: 14px;
+}
+
+
+.feature p {
+  margin:
+    5px 0 0;
+
+  color: #64748b;
+
+  font-size: 12px;
+
+  line-height: 1.5;
+}
+
+
+/* =========================
+   SECURITY
+========================= */
+
+.receiver-security {
+  margin:
+    20px 0 50px;
+
+  padding: 18px;
+
+  background: #ecfdf5;
+
+  border-radius: 12px;
+
+  display: flex;
+
+  gap: 12px;
+}
+
+
+.receiver-security > span {
+  font-size: 23px;
+}
+
+
+.receiver-security strong {
+  font-size: 14px;
+}
+
+
+.receiver-security p {
+  margin:
+    5px 0 0;
+
+  color: #64748b;
+
+  font-size: 13px;
+
+  line-height: 1.5;
+}
+
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 700px) {
+
+  .receiver-header {
+    padding: 0 20px;
+  }
+
+  .receiver-main {
+    width: 94%;
+  }
+
+  .receiver-heading h1 {
+    font-size: 30px;
+  }
+
+  .receiver-card {
+    padding: 25px 20px;
+  }
+
+  .receiver-features {
+    grid-template-columns: 1fr;
+  }
+
+}
+.receiver-error {
+  margin-top: 15px;
+  padding: 12px;
+
+  background: #fef2f2;
+  color: #b91c1c;
+
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+
+  font-size: 13px;
+  text-align: left;
+}
+
+.disconnect-button {
+  width: 100%;
+  margin-top: 15px;
+
+  padding: 15px;
+
+  border: none;
+  border-radius: 10px;
+
+  background: #dc2626;
+  color: white;
+
+  font-size: 16px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.disconnect-button:hover {
+  background: #b91c1c;
+}
+
+.receiver-dot.connected {
+  background: #22c55e;
+}
+.screen-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, .05);
+}
+
+.screen-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 15px;
+}
+
+.screen-header h2 {
+  margin: 0;
+}
+
+.screen-header p {
+  margin: 5px 0 0;
+  color: #64748b;
+}
+
+.video-container {
+  position: relative;
+  width: 100%;
+  min-height: 400px;
+  background: #111827;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.video-container video {
+  width: 100%;
+  height: auto;
+  min-height: 400px;
+  display: block;
+  object-fit: contain;
+}
+
+.video-status {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+
+  padding: 7px 11px;
+
+  background: rgba(0, 0, 0, .7);
+  color: white;
+
+  border-radius: 20px;
+
+  font-size: 12px;
+}
+
+.disconnect-button {
+  border: none;
+  background: #dc2626;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+}
