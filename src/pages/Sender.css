@@ -424,6 +424,33 @@
   font-size: 13px;
 }
 
+.capture-exclusion-option {
+  margin: 20px 0;
+  padding: 14px;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.capture-exclusion-option label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #1e3a5f;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.capture-exclusion-option p {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.capture-exclusion-option .capture-exclusion-status {
+  color: #1d4ed8;
+}
+
 
 /* MOBILE */
 

@@ -16,6 +16,7 @@ function Receiver() {
   const [connecting, setConnecting] = useState(false);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState("");
+  const [captureExclusionStatus, setCaptureExclusionStatus] = useState("");
 
   const videoRef = useRef(null);
   const peerRef = useRef(null);
@@ -98,6 +99,22 @@ function Receiver() {
           setConnecting(false);
           setConnected(false);
           setError(data.message);
+          break;
+        case "display-affinity":
+          setCaptureExclusionStatus(
+            "This browser cannot apply Windows capture exclusion. A desktop client is required."
+          );
+          if (socket.readyState === WebSocket.OPEN && sessionRef.current) {
+            socket.send(
+              JSON.stringify({
+                type: "display-affinity-result",
+                sessionId: sessionRef.current,
+                windowDisplayAffinity: data.windowDisplayAffinity,
+                captureExclusionRequested: Boolean(data.captureExclusionRequested),
+                captureExcluded: false
+              })
+            );
+          }
           break;
         default:
           break;
@@ -341,6 +358,10 @@ function Receiver() {
                 <p>
                   Live screen sharing
                 </p>
+
+                {captureExclusionStatus && (
+                  <p role="status">{captureExclusionStatus}</p>
+                )}
 
               </div>
 

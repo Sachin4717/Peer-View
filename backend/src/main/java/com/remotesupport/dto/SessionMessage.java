@@ -6,9 +6,18 @@ import com.fasterxml.jackson.databind.JsonNode;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SessionMessage {
 
+    /**
+     * Windows WDA_EXCLUDEFROMCAPTURE value. A desktop client applies this to
+     * one of its own windows with SetWindowDisplayAffinity().
+     */
+    public static final int WDA_EXCLUDEFROMCAPTURE = 0x00000011;
+
     private String type;
     private String sessionId;
     private String controlType;
+    private Integer windowDisplayAffinity;
+    private boolean captureExclusionRequested;
+    private boolean captureExcluded;
     private JsonNode offer;
     private JsonNode answer;
     private JsonNode candidate;
@@ -36,6 +45,38 @@ public class SessionMessage {
 
     public void setControlType(String controlType) {
         this.controlType = controlType;
+    }
+
+    public Integer getWindowDisplayAffinity() {
+        return windowDisplayAffinity;
+    }
+
+    public void setWindowDisplayAffinity(Integer windowDisplayAffinity) {
+        this.windowDisplayAffinity = windowDisplayAffinity;
+    }
+
+    public boolean hasSupportedWindowDisplayAffinity() {
+        return Integer.valueOf(WDA_EXCLUDEFROMCAPTURE).equals(windowDisplayAffinity);
+    }
+
+    /**
+     * Explicit user-requested capture exclusion for this application's own
+     * window. The desktop client must obtain consent before applying it.
+     */
+    public boolean isCaptureExclusionRequested() {
+        return captureExclusionRequested;
+    }
+
+    public void setCaptureExclusionRequested(boolean captureExclusionRequested) {
+        this.captureExclusionRequested = captureExclusionRequested;
+    }
+
+    public boolean isCaptureExcluded() {
+        return captureExcluded;
+    }
+
+    public void setCaptureExcluded(boolean captureExcluded) {
+        this.captureExcluded = captureExcluded;
     }
 
     public JsonNode getOffer() {

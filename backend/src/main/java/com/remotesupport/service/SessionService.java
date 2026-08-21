@@ -40,6 +40,17 @@ public class SessionService {
         return sender;
     }
 
+    public boolean isSessionParticipant(String sessionId, WebSocketSession session) {
+        if (sessionId == null || session == null) {
+            return false;
+        }
+        String socketId = session.getId();
+        WebSocketSession sender = getSenderSession(sessionId);
+        WebSocketSession receiver = getReceiverSession(sessionId);
+        return (sender != null && socketId.equals(sender.getId()))
+                || (receiver != null && socketId.equals(receiver.getId()));
+    }
+
     public void removeSession(String sessionId, WebSocketSession session) {
         WebSocketSession sender = senders.get(sessionId);
         WebSocketSession receiver = receivers.get(sessionId);

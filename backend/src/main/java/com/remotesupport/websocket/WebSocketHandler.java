@@ -37,6 +37,10 @@ public class WebSocketHandler extends TextWebSocketHandler {
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
         SessionMessage payload = objectMapper.readValue(message.getPayload(), SessionMessage.class);
+        if (payload.getType() == null || payload.getType().isBlank()) {
+            send(session, "session-error", Map.of("message", "Message type is required"));
+            return;
+        }
 
         switch (payload.getType()) {
             case "create-session" -> handleCreateSession(session);
@@ -46,6 +50,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
             case "ice-candidate" -> handleIceCandidate(session, payload);
             case "control-request" -> handleControlRequest(session, payload);
             case "control-response" -> handleControlResponse(session, payload);
+            case "display-affinity", "display-affinity-result" -> handleDisplayAffinity(session, payload);
             default -> logger.warn("Unknown message type: {}", payload.getType());
         }
     }
@@ -62,7 +67,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
     private void handleJoinSession(WebSocketSession session, SessionMessage payload) throws IOException {
         String sessionId = payload.getSessionId();
-        if (!sessionService.sessionExists(sessionId)) {
+        if (sessionId == null || !sessionService.sessionExists(sessionId)) {
             send(session, "session-error", Map.of("message", "Session not found"));
             return;
         }
@@ -107,6 +112,24 @@ public class WebSocketHandler extends TextWebSocketHandler {
         String sessionId = payload.getSessionId();
         sendToOther(sessionId, session, "control-response", Map.of("controlType", payload.getControlType(), "allowed", payload.isAllowed()));
         logger.info("{}: {}", payload.getControlType(), payload.isAllowed() ? "allowed" : "denied");
+    }
+
+    private void handleDisplayAffinity(WebSocketSession session, SessionMessage payload) throws IOException {
+        String sessionId = payload.getSessionId();
+        if (!sessionService.isSessionParticipant(sessionId, session)) {
+            send(session, "session-error", Map.of("message", "Not a session participant"));
+            return;
+        }
+        if (!payload.hasSupportedWindowDisplayAffinity()) {
+            send(session, "session-error", Map.of("message", "Unsupported window display affinity"));
+            return;
+        }
+
+        sendToOther(sessionId, session, payload.getType(), Map.of(
+                "windowDisplayAffinity", SessionMessage.WDA_EXCLUDEFROMCAPTURE,
+                "captureExclusionRequested", payload.isCaptureExclusionRequested(),
+                "captureExcluded", payload.isCaptureExcluded()));
+        logger.info("Display affinity message relayed: {}", sessionId);
     }
 
     @Override

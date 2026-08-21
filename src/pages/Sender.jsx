@@ -9,10 +9,14 @@ const rtcConfig = {
   ]
 };
 
+const WINDOWS_CAPTURE_EXCLUSION_AFFINITY = 0x00000011;
+
 function Sender() {
   const [sessionId, setSessionId] = useState("");
   const [connected, setConnected] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [captureExclusionRequested, setCaptureExclusionRequested] = useState(false);
+  const [captureExclusionStatus, setCaptureExclusionStatus] = useState("");
 
   const peerRef = useRef(null);
   const streamRef = useRef(null);
@@ -60,6 +64,16 @@ function Sender() {
             console.error("ICE error:", error);
           }
           break;
+        case "display-affinity-result":
+          setCaptureExclusionStatus(
+            data.captureExcluded
+              ? "Capture exclusion is active in the connected desktop client."
+              : "The connected client could not enable capture exclusion."
+          );
+          break;
+        case "session-error":
+          setCaptureExclusionStatus(data.message);
+          break;
         default:
           break;
       }
@@ -81,6 +95,33 @@ function Sender() {
   const copySessionId = async () => {
     await navigator.clipboard.writeText(sessionId);
     alert("Session ID copied");
+  };
+
+  const updateCaptureExclusionRequest = (requested) => {
+    setCaptureExclusionRequested(requested);
+
+    if (!requested) {
+      setCaptureExclusionStatus("Capture exclusion request disabled.");
+      return;
+    }
+
+    if (!connected || !sessionId || socketRef.current?.readyState !== WebSocket.OPEN) {
+      setCaptureExclusionStatus("Connect a receiver before requesting capture exclusion.");
+      return;
+    }
+
+    socketRef.current.send(
+      JSON.stringify({
+        type: "display-affinity",
+        sessionId,
+        windowDisplayAffinity: WINDOWS_CAPTURE_EXCLUSION_AFFINITY,
+        captureExclusionRequested: true,
+        captureExcluded: false
+      })
+    );
+    setCaptureExclusionStatus(
+      "Request sent. A Windows desktop client must apply and confirm the setting."
+    );
   };
 
   const startSharing = async () => {
@@ -190,6 +231,25 @@ function Sender() {
               <strong>{connected ? "Receiver connected" : "Waiting for receiver"}</strong>
               <p>{connected ? "You can now start screen sharing." : "Give the Session ID to another computer."}</p>
             </div>
+          </div>
+          <div className="capture-exclusion-option">
+            <label>
+              <input
+                type="checkbox"
+                checked={captureExclusionRequested}
+                disabled={!connected}
+                onChange={(event) => updateCaptureExclusionRequest(event.target.checked)}
+              />
+              Request capture exclusion for this application window
+            </label>
+            <p>
+              This requires a Windows desktop client and never affects other applications.
+            </p>
+            {captureExclusionStatus && (
+              <p className="capture-exclusion-status" role="status">
+                {captureExclusionStatus}
+              </p>
+            )}
           </div>
           {!sharing ? (
             <button className="share-button" onClick={startSharing} disabled={!connected}>
