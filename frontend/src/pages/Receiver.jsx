@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./Receiver.css";
 
-const socketUrl = "ws://localhost:5001/ws";
+const socketUrl = import.meta.env.VITE_WS_URL || "ws://localhost:5001/ws";
 
 const rtcConfig = {
   iceServers: [

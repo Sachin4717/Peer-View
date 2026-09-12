@@ -33,7 +33,7 @@ function Sender() {
   const controlRequestHandlerRef = useRef(null);
 
   useEffect(() => {
-    const socket = new WebSocket("ws://localhost:5001/ws");
+    const socket = new WebSocket(import.meta.env.VITE_WS_URL || "ws://localhost:5001/ws");
     socketRef.current = socket;
 
     socket.onopen = () => {
