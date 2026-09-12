@@ -20,6 +20,7 @@ function Sender() {
   const [captureExclusionStatus, setCaptureExclusionStatus] = useState("");
   const [grantedControl, setGrantedControl] = useState({ mouse: false, keyboard: false });
   const [controlActivity, setControlActivity] = useState("");
+  const [pendingControlRequest, setPendingControlRequest] = useState(null);
 
   const peerRef = useRef(null);
   const streamRef = useRef(null);
@@ -136,10 +137,16 @@ function Sender() {
   function handleControlRequest(data) {
     const controlType = data?.controlType;
     if (controlType !== "mouse" && controlType !== "keyboard") return;
+    // Use an in-page dialog instead of window.confirm(): browsers silently
+    // auto-dismiss confirm() (returning false) when the tab is unfocused,
+    // which denied control requests without the sender ever choosing.
+    setPendingControlRequest({ controlType });
+  }
 
-    const allowed = window.confirm(
-      `The receiver is requesting ${controlType} control of your computer. Allow?`
-    );
+  function respondToControlRequest(allowed) {
+    const controlType = pendingControlRequest?.controlType;
+    setPendingControlRequest(null);
+    if (!controlType) return;
 
     if (allowed) {
       grantedControlRef.current = { ...grantedControlRef.current, [controlType]: true };
@@ -547,6 +554,31 @@ function Sender() {
           )}
           {!controlActivity && (
             <div className="permission-message">🔐 Remote control requires your approval.</div>
+          )}
+          {pendingControlRequest && (
+            <div className="control-approval" role="alertdialog" aria-live="assertive">
+              <p>
+                <strong>
+                  The receiver is requesting{" "}
+                  {pendingControlRequest.controlType === "mouse" ? "mouse" : "keyboard"} control
+                  of your computer. Allow?
+                </strong>
+              </p>
+              <div className="control-approval-actions">
+                <button
+                  className="approve-button"
+                  onClick={() => respondToControlRequest(true)}
+                >
+                  ✅ Allow
+                </button>
+                <button
+                  className="deny-button"
+                  onClick={() => respondToControlRequest(false)}
+                >
+                  ✖ Deny
+                </button>
+              </div>
+            </div>
           )}
         </section>
       </main>

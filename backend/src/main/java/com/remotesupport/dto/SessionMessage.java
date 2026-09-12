@@ -22,6 +22,7 @@ public class SessionMessage {
     private JsonNode answer;
     private JsonNode candidate;
     private JsonNode event;
+    private JsonNode data;  // For application control and other flexible payloads
     private boolean allowed;
 
     public String getType() {
@@ -110,6 +111,14 @@ public class SessionMessage {
 
     public void setEvent(JsonNode event) {
         this.event = event;
+    }
+
+    public JsonNode getData() {
+        return data;
+    }
+
+    public void setData(JsonNode data) {
+        this.data = data;
     }
 
     public boolean isAllowed() {

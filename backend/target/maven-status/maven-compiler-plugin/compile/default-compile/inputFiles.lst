@@ -5,8 +5,11 @@ C:\Users\sachi\OneDrive\Desktop\Peer-View-main\backend\src\main\java\com\remotes
 C:\Users\sachi\OneDrive\Desktop\Peer-View-main\backend\src\main\java\com\remotesupport\config\WebSocketConfig.java
 C:\Users\sachi\OneDrive\Desktop\Peer-View-main\backend\src\main\java\com\remotesupport\RemoteSupportApplication.java
 C:\Users\sachi\OneDrive\Desktop\Peer-View-main\backend\src\main\java\com\remotesupport\dto\SessionMessage.java
+C:\Users\sachi\OneDrive\Desktop\Peer-View-main\backend\src\main\java\com\remotesupport\dto\WindowInfoDTO.java
 C:\Users\sachi\OneDrive\Desktop\Peer-View-main\backend\src\main\java\com\remotesupport\websocket\WebSocketHandler.java
+C:\Users\sachi\OneDrive\Desktop\Peer-View-main\backend\src\main\java\com\remotesupport\controller\ApplicationController.java
 C:\Users\sachi\OneDrive\Desktop\Peer-View-main\backend\src\main\java\com\remotesupport\controller\WindowHideController.java
+C:\Users\sachi\OneDrive\Desktop\Peer-View-main\backend\src\main\java\com\remotesupport\dto\ApplicationControlRequest.java
 C:\Users\sachi\OneDrive\Desktop\Peer-View-main\backend\src\main\java\com\remotesupport\window\WindowsWindowHelper.java
 C:\Users\sachi\OneDrive\Desktop\Peer-View-main\backend\src\main\java\com\remotesupport\config\CorsConfig.java
 C:\Users\sachi\OneDrive\Desktop\Peer-View-main\backend\src\main\java\com\remotesupport\websocket\WebSocketSessionManager.java

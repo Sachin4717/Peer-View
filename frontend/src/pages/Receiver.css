@@ -540,6 +540,15 @@
   object-fit: contain;
 }
 
+.video-container canvas {
+  width: 100%;
+  height: auto;
+  min-height: 400px;
+  display: block;
+  object-fit: contain;
+  cursor: crosshair;
+}
+
 .video-status {
   position: absolute;
   top: 12px;

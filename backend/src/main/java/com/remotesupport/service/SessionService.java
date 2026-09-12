@@ -61,4 +61,9 @@ public class SessionService {
             receivers.remove(sessionId);
         }
     }
+
+    /** Snapshot of active session ids for debugging/monitoring. */
+    public java.util.List<String> activeSessionIds() {
+        return senders.keySet().stream().sorted().toList();
+    }
 }

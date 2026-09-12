@@ -64,9 +64,14 @@ public class WebSocketHandler extends TextWebSocketHandler {
             case "audio-offer" -> handleAudioOffer(session, payload);
             case "audio-answer" -> handleAudioAnswer(session, payload);
             case "audio-ice-candidate" -> handleAudioIceCandidate(session, payload);
-            case "control-request" -> handleControlRequest(session, payload);
-            case "control-response" -> handleControlResponse(session, payload);
-            case "control-event" -> handleControlEvent(session, payload);
+            // Real-time receiver -> sender microphone audio, control grant and
+            // revoke notifications, control events, screen frames and file
+            // chunks are all dumb-relayed between the two participants.
+            case "audio-message", "control-revoke", "control-request",
+                 "control-response", "control-event", "screen-frame",
+                 "file-message" -> relayRaw(session, message.getPayload());
+            case "get-windows" -> handleGetWindows(session, payload);
+            case "control-app" -> handleControlApp(session, payload);
             case "display-affinity", "display-affinity-result" -> handleDisplayAffinity(session, payload);
             default -> logger.warn("Unknown message type: {}", payload.getType());
         }
@@ -218,6 +223,38 @@ public class WebSocketHandler extends TextWebSocketHandler {
         logger.debug("Control event relayed: {}", sessionId);
     }
 
+    /**
+     * Handles GET_WINDOWS requests to fetch list of visible windows from desktop sender.
+     */
+    private void handleGetWindows(WebSocketSession session, SessionMessage payload) throws IOException {
+        String sessionId = payload.getSessionId();
+        if (!isSessionParticipant(sessionId, session, "get-windows")) {
+            return;
+        }
+        if (payload.getData() == null || payload.getData().isNull()) {
+            send(session, "session-error", Map.of("message", "Data payload is required"));
+            return;
+        }
+        sendToOther(sessionId, session, "get-windows", payload.getData());
+        logger.debug("Get windows request relayed: {}", sessionId);
+    }
+
+    /**
+     * Handles CONTROL_APP requests to send application control commands to desktop sender.
+     */
+    private void handleControlApp(WebSocketSession session, SessionMessage payload) throws IOException {
+        String sessionId = payload.getSessionId();
+        if (!isSessionParticipant(sessionId, session, "control-app")) {
+            return;
+        }
+        if (payload.getData() == null || payload.getData().isNull()) {
+            send(session, "session-error", Map.of("message", "Control data payload is required"));
+            return;
+        }
+        sendToOther(sessionId, session, "control-app", payload.getData());
+        logger.debug("Control app command relayed: {}", sessionId);
+    }
+
     private boolean isSessionParticipant(String sessionId, WebSocketSession session, String messageType) throws IOException {
         if (sessionId == null || sessionId.isBlank()) {
             send(session, "session-error", Map.of("message", "Session ID is required"));
@@ -228,6 +265,28 @@ public class WebSocketHandler extends TextWebSocketHandler {
             return false;
         }
         return true;
+    }
+
+    /**
+     * Relays a raw JSON message (screen frames, file transfer chunks) to the
+     * other participant of the session without deserializing it into
+     * SessionMessage. The desktop sender and the browser receiver use
+     * payloads that only they understand; the server stays a dumb relay.
+     */
+    private void relayRaw(WebSocketSession session, String rawPayload) throws IOException {
+        JsonNode node = objectMapper.readTree(rawPayload);
+        String type = node.path("type").asText("");
+        String sessionId = node.path("sessionId").asText("");
+        if (type.isBlank() || !sessionService.isSessionParticipant(sessionId, session)) {
+            send(session, "session-error", Map.of("message", "Not a session participant"));
+            return;
+        }
+        WebSocketSession target = sessionService.getOtherSession(sessionId, session);
+        if (target != null && target.isOpen()) {
+            synchronized (target) {
+                target.sendMessage(new TextMessage(rawPayload));
+            }
+        }
     }
 
     private void handleDisplayAffinity(WebSocketSession session, SessionMessage payload) throws IOException {
@@ -259,15 +318,44 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        cleanup(session, status);
+    }
+
+    @Override
+    public void handleTransportError(WebSocketSession session, Throwable exception) {
+        // A broken connection must free its session slots immediately, or a
+        // restart of the sender/receiver would leave ghost participants.
+        logger.warn("Transport error on {}: {}", session.getId(), exception.getMessage());
+        cleanup(session, CloseStatus.SERVER_ERROR);
+    }
+
+    private void cleanup(WebSocketSession session, CloseStatus status) {
         String sessionId = sessionIdBySocket.remove(session.getId());
         if (sessionId != null) {
+            String role = String.valueOf(session.getAttributes().getOrDefault("role", ""));
             sessionService.removeSession(sessionId, session);
+            // Notify the surviving peer so it can drop live control grants
+            // and remote audio immediately (AnyDesk-style safety). The role
+            // is read before the session maps are mutated.
+            WebSocketSession peer = "sender".equals(role)
+                    ? sessionService.getReceiverSession(sessionId)
+                    : sessionService.getSenderSession(sessionId);
+            if (peer != null && peer.isOpen()) {
+                try {
+                    send(peer, "peer-disconnected", Map.of("role", role));
+                } catch (IOException e) {
+                    logger.debug("Could not notify peer of disconnect: {}", e.getMessage());
+                }
+            }
         }
-        logger.info("Disconnected: {}", session.getId());
+        logger.info("Disconnected: {} ({})", session.getId(), status);
     }
 
     private void send(WebSocketSession session, String type, Object data) throws IOException {
-        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of("type", type, "data", data))));
+        // Tomcat rejects concurrent sends on one session; serialize access.
+        synchronized (session) {
+            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of("type", type, "data", data))));
+        }
     }
 
     private void sendToSession(String sessionId, String type, Object data) throws IOException {

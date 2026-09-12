@@ -1,0 +1,16 @@
+com\remotesupport\desktop\ScreenCaptureThread.class
+com\remotesupport\desktop\ApplicationWindowManager$User32Extended.class
+com\remotesupport\desktop\FileOps.class
+com\remotesupport\desktop\ApplicationControlService.class
+com\remotesupport\desktop\ScreenCaptureThread$FrameListener.class
+com\remotesupport\desktop\DesktopSender$WsClient.class
+com\remotesupport\desktop\WindowAffinity.class
+com\remotesupport\desktop\ApplicationWindowManager$WindowInfo.class
+com\remotesupport\desktop\ApplicationControlService$User32Clipboard.class
+com\remotesupport\desktop\InputInjector.class
+com\remotesupport\desktop\ApplicationWindowManager.class
+com\remotesupport\desktop\DesktopSender.class
+com\remotesupport\desktop\DesktopSender$1.class
+com\remotesupport\desktop\KeyMapper.class
+com\remotesupport\desktop\InputInjector$User32Input.class
+com\remotesupport\desktop\WindowAffinity$User32Ex.class
