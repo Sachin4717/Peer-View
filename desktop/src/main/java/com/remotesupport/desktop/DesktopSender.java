@@ -25,22 +25,10 @@ import javax.swing.SwingUtilities;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
-/**
- * Native Windows desktop sender.
- *
- * <p>
- * Replaces the browser-based sender for full remote support:
- * <ul>
- * <li>Streams the real screen (all monitors) to the receiver.</li>
- * <li>Injects receiver mouse/keyboard input at the OS level (SendInput).</li>
- * <li>Can exclude its own window from screen capture
- * (WDA_EXCLUDEFROMCAPTURE).</li>
- * <li>Supports file upload (receiver -> Downloads) and download.</li>
- * </ul>
- */
+
 public class DesktopSender extends JFrame {
 
-    private static final String WS_URL = "ws://localhost:5001/ws";
+    private static final String WS_URL = "wss://deskcontroler.onrender.com/ws";
     private static final int CHUNK_SIZE = 256 * 1024; // bytes per file chunk
     private static final int WDA_EXCLUDEFROMCAPTURE = 0x00000011;
 

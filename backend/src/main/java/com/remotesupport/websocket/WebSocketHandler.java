@@ -61,13 +61,10 @@ public class WebSocketHandler extends TextWebSocketHandler {
             case "offer" -> handleOffer(session, payload);
             case "answer" -> handleAnswer(session, payload);
             case "ice-candidate" -> handleIceCandidate(session, payload);
-            case "audio-offer" -> handleAudioOffer(session, payload);
-            case "audio-answer" -> handleAudioAnswer(session, payload);
-            case "audio-ice-candidate" -> handleAudioIceCandidate(session, payload);
             // Real-time receiver -> sender microphone audio, control grant and
             // revoke notifications, control events, screen frames and file
             // chunks are all dumb-relayed between the two participants.
-            case "audio-message", "control-revoke", "control-request",
+            case "audio-message", "audio-stop", "control-revoke", "control-request",
                  "control-response", "control-event", "screen-frame",
                  "file-message" -> relayRaw(session, message.getPayload());
             case "get-windows" -> handleGetWindows(session, payload);
@@ -128,33 +125,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
         String sessionId = payload.getSessionId();
         sendToOther(sessionId, session, "ice-candidate", payload.getCandidate());
         logger.info("ICE candidate sent: {}", sessionId);
-    }
-
-    private void handleAudioOffer(WebSocketSession session, SessionMessage payload) throws IOException {
-        if (!isRelayAllowed(session, payload, payload.getOffer())) {
-            return;
-        }
-        String sessionId = payload.getSessionId();
-        sendToOther(sessionId, session, "audio-offer", payload.getOffer());
-        logger.info("Audio offer sent: {}", sessionId);
-    }
-
-    private void handleAudioAnswer(WebSocketSession session, SessionMessage payload) throws IOException {
-        if (!isRelayAllowed(session, payload, payload.getAnswer())) {
-            return;
-        }
-        String sessionId = payload.getSessionId();
-        sendToOther(sessionId, session, "audio-answer", payload.getAnswer());
-        logger.info("Audio answer sent: {}", sessionId);
-    }
-
-    private void handleAudioIceCandidate(WebSocketSession session, SessionMessage payload) throws IOException {
-        if (!isRelayAllowed(session, payload, payload.getCandidate())) {
-            return;
-        }
-        String sessionId = payload.getSessionId();
-        sendToOther(sessionId, session, "audio-ice-candidate", payload.getCandidate());
-        logger.info("Audio ICE candidate sent: {}", sessionId);
     }
 
     /**

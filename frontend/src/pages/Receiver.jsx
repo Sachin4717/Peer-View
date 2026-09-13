@@ -29,9 +29,7 @@ function Receiver() {
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const audioRef = useRef(null);
   const peerRef = useRef(null);
-  const audioPeerRef = useRef(null);
   const socketRef = useRef(null);
   const sessionRef = useRef("");
   const controlChannelRef = useRef(null);
@@ -119,65 +117,6 @@ function Receiver() {
             console.error("ICE error:", error);
           }
           break;
-        case "audio-offer":
-          try {
-            console.log("Audio offer received");
-            const audioPeer = new RTCPeerConnection(rtcConfig);
-            audioPeerRef.current = audioPeer;
-
-            audioPeer.ontrack = (event) => {
-              console.log("Voice track received");
-              if (audioRef.current) {
-                audioRef.current.srcObject = event.streams[0];
-                audioRef.current.play().catch((playError) => {
-                  console.error("Audio playback error:", playError);
-                });
-              }
-              setVoiceActive(true);
-            };
-
-            audioPeer.onicecandidate = (event) => {
-              if (event.candidate) {
-                socket.send(
-                  JSON.stringify({
-                    type: "audio-ice-candidate",
-                    sessionId: sessionRef.current,
-                    candidate: event.candidate
-                  })
-                );
-              }
-            };
-
-            await audioPeer.setRemoteDescription(
-              new RTCSessionDescription(data)
-            );
-            const audioAnswer = await audioPeer.createAnswer();
-            await audioPeer.setLocalDescription(audioAnswer);
-
-            socket.send(
-              JSON.stringify({
-                type: "audio-answer",
-                sessionId: sessionRef.current,
-                answer: audioAnswer
-              })
-            );
-
-            console.log("Audio answer sent");
-          } catch (error) {
-            console.error("Audio WebRTC error:", error);
-          }
-          break;
-        case "audio-ice-candidate":
-          try {
-            if (audioPeerRef.current && data) {
-              await audioPeerRef.current.addIceCandidate(
-                new RTCIceCandidate(data)
-              );
-            }
-          } catch (error) {
-            console.error("Audio ICE error:", error);
-          }
-          break;
         case "control-response":
           {
             const controlType = data?.controlType;
@@ -242,6 +181,11 @@ function Receiver() {
 
     socket.onclose = () => {
       console.log("WebSocket closed");
+      // Stop the microphone chain so no timer keeps sending on the dead
+      // socket (this was flooding the console with send errors).
+      stopMicShare();
+      setConnected(false);
+      setConnecting(false);
     };
 
     socket.onerror = (error) => {
@@ -255,6 +199,7 @@ function Receiver() {
 
   // ---------------------------------------------------------------
   // Live microphone -> sender (AnyDesk-style voice, real time)
+  // (pass)
   // ---------------------------------------------------------------
 
   const micStreamRef = useRef(null);
@@ -272,11 +217,16 @@ function Receiver() {
         audio: { echoCancellation: true, noiseSuppression: true }
       });
       micStreamRef.current = stream;
-      const SAMPLE_RATE = 24000;
-      const context = new AudioContext({ sampleRate: SAMPLE_RATE });
+      // IMPORTANT: create the AudioContext at its NATIVE sample rate. Forcing
+      // e.g. 24000 makes Chrome compute a 1200-frame default ScriptProcessor
+      // buffer (device rate / 40) and createScriptProcessor then throws
+      // IndexSizeError. The sender rebuilds its playback line for whatever
+      // rate we report, so the native rate (usually 44100/48000) is best.
+      const context = new AudioContext();
+      const SAMPLE_RATE = context.sampleRate;
       audioContextRef.current = context;
       const source = context.createMediaStreamSource(stream);
-      const processor = context.createScriptProcessor(2048, 1, 1); // ~85 ms
+      const processor = context.createScriptProcessor(2048, 1, 1); // ~40-45 ms
       processor.onaudioprocess = (e) => {
         if (!micActiveRef.current) return;
         const input = e.inputBuffer.getChannelData(0);
@@ -291,15 +241,31 @@ function Receiver() {
         for (let i = 0; i < bytes.length; i++) {
           binary += String.fromCharCode(bytes[i]);
         }
-        socketRef.current?.send(JSON.stringify({
+        // Only send while the socket is actually usable; sending on a closed
+        // socket throws "already in CLOSING or CLOSED state" every 85 ms.
+        const socket = socketRef.current;
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+          stopMicShare();
+          setVoiceStatus("Connection lost — microphone sharing stopped.");
+          return;
+        }
+        socket.send(JSON.stringify({
           type: "audio-message",
           sessionId: sessionRef.current,
           pcm: btoa(binary),
           sampleRate: SAMPLE_RATE
         }));
+        // (SAMPLE_RATE is read from the closure above; it is the context's
+        // real rate, so the sender opens a matching speaker line.)
       };
       source.connect(processor);
-      processor.connect(context.destination); // script processors need a sink
+      // ScriptProcessors only run when connected to the destination, but the
+      // mic must NOT reach the local speakers (feedback echo). A zero-gain
+      // node keeps the graph alive while silencing the local output.
+      const silentSink = context.createGain();
+      silentSink.gain.value = 0;
+      processor.connect(silentSink);
+      silentSink.connect(context.destination);
       micActiveRef.current = true;
       setVoiceActive(true);
       setVoiceStatus("🎤 Your microphone is live — the sender can hear you.");
@@ -603,15 +569,6 @@ function Receiver() {
 
     }
 
-
-    if (audioPeerRef.current) {
-
-      audioPeerRef.current.close();
-
-      audioPeerRef.current = null;
-
-    }
-
     controlChannelRef.current = null;
     controlGrantedRef.current = { mouse: false, keyboard: false };
     setControlGranted({ mouse: false, keyboard: false });
@@ -626,13 +583,6 @@ function Receiver() {
     if (videoRef.current) {
 
       videoRef.current.srcObject = null;
-
-    }
-
-
-    if (audioRef.current) {
-
-      audioRef.current.srcObject = null;
 
     }
 
@@ -986,8 +936,6 @@ function Receiver() {
                 {controlStatus}
               </div>
             )}
-
-            <audio ref={audioRef} autoPlay className="voice-audio" />
 
             <div className={
               voiceActive

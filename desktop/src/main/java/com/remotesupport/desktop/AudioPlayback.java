@@ -79,8 +79,9 @@ public final class AudioPlayback {
         AudioFormat format = new AudioFormat(sampleRate, 16, 1, true, false);
         line = (SourceDataLine) AudioSystem.getLine(
                 new DataLine.Info(SourceDataLine.class, format));
-        // 4 x 20 ms buffers keep latency low without starving.
-        line.open(format, sampleRate / 25);
+        // ~50 ms internal buffer: low latency, but big enough to absorb
+        // jitter between the ~40 ms WebSocket chunks without underruns.
+        line.open(format, sampleRate / 20 * 2);
         line.start();
         lineSampleRate = sampleRate;
     }

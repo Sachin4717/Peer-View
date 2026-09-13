@@ -15,7 +15,7 @@ function Sender() {
   const [sessionId, setSessionId] = useState("");
   const [connected, setConnected] = useState(false);
   const [sharing, setSharing] = useState(false);
-  const [voiceSharing, setVoiceSharing] = useState(false);
+  const [micLive, setMicLive] = useState(false);
   const [captureExclusionRequested, setCaptureExclusionRequested] = useState(false);
   const [captureExclusionStatus, setCaptureExclusionStatus] = useState("");
   const [grantedControl, setGrantedControl] = useState({ mouse: false, keyboard: false });
@@ -24,9 +24,11 @@ function Sender() {
 
   const peerRef = useRef(null);
   const streamRef = useRef(null);
-  const audioPeerRef = useRef(null);
-  const audioStreamRef = useRef(null);
   const socketRef = useRef(null);
+  // --- Receiver -> Sender microphone playback (Web Audio streaming queue) ---
+  const audioContextRef = useRef(null);
+  const nextStartTimeRef = useRef(0);
+  const micIndicatorTimeoutRef = useRef(null);
   const controlChannelRef = useRef(null);
   const grantedControlRef = useRef({ mouse: false, keyboard: false });
   const sessionIdRef = useRef("");
@@ -75,27 +77,11 @@ function Sender() {
             console.error("ICE error:", error);
           }
           break;
-        case "audio-answer":
-          try {
-            if (!audioPeerRef.current) return;
-            await audioPeerRef.current.setRemoteDescription(
-              new RTCSessionDescription(data)
-            );
-            console.log("Audio answer received");
-          } catch (error) {
-            console.error("Audio answer error:", error);
-          }
+        case "audio-message":
+          playIncomingMicAudio(message);
           break;
-        case "audio-ice-candidate":
-          try {
-            if (audioPeerRef.current && data) {
-              await audioPeerRef.current.addIceCandidate(
-                new RTCIceCandidate(data)
-              );
-            }
-          } catch (error) {
-            console.error("Audio ICE error:", error);
-          }
+        case "audio-stop":
+          resetMicPlayback();
           break;
         case "control-request":
           if (controlRequestHandlerRef.current) {
@@ -353,91 +339,77 @@ function Sender() {
     console.log("Screen sharing stopped");
   };
 
-  const startVoiceSharing = async () => {
+  // ---------------------------------------------------------------------
+  // Receiver -> Sender microphone playback (base64 PCM over WebSocket)
+  // ---------------------------------------------------------------------
+
+  function playIncomingMicAudio(message) {
     try {
-      if (!connected) {
-        alert("Please connect a receiver first.");
-        return;
+      const { pcm, sampleRate } = message;
+      if (!pcm) return;
+
+      // Lazily create one persistent AudioContext at the incoming rate.
+      if (
+        !audioContextRef.current ||
+        audioContextRef.current.sampleRate !== (sampleRate || 24000)
+      ) {
+        audioContextRef.current?.close().catch(() => {});
+        audioContextRef.current = new AudioContext({
+          sampleRate: sampleRate || 24000
+        });
+        nextStartTimeRef.current = 0;
+      }
+      const context = audioContextRef.current;
+
+      // base64 -> Int16 (little-endian PCM) -> Float32 in [-1, 1]
+      const binary = atob(pcm);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      const int16 = new Int16Array(bytes.buffer);
+      const float32 = new Float32Array(int16.length);
+      for (let i = 0; i < int16.length; i++) {
+        float32[i] = int16[i] / 0x8000;
       }
 
-      // System audio is captured through getDisplayMedia; the video track is
-      // discarded immediately so only the computer's sound is transmitted.
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false
-        }
-      });
-
-      stream.getVideoTracks().forEach((track) => track.stop());
-
-      if (stream.getAudioTracks().length === 0) {
-        stream.getTracks().forEach((track) => track.stop());
-        alert(
-          "No system audio was shared. Pick a screen/tab and enable the 'Share audio' checkbox, then try again."
-        );
-        return;
-      }
-
-      audioStreamRef.current = stream;
-      const peer = new RTCPeerConnection(rtcConfig);
-      audioPeerRef.current = peer;
-
-      stream.getAudioTracks().forEach((track) => {
-        peer.addTrack(track, stream);
-      });
-
-      peer.onicecandidate = (event) => {
-        if (event.candidate) {
-          socketRef.current?.send(
-            JSON.stringify({
-              type: "audio-ice-candidate",
-              sessionId,
-              candidate: event.candidate
-            })
-          );
-        }
-      };
-
-      stream.getAudioTracks()[0].onended = () => {
-        stopVoiceSharing();
-      };
-
-      const offer = await peer.createOffer();
-      await peer.setLocalDescription(offer);
-
-      socketRef.current?.send(
-        JSON.stringify({
-          type: "audio-offer",
-          sessionId,
-          offer
-        })
+      const audioBuffer = context.createBuffer(
+        1,
+        float32.length,
+        context.sampleRate
       );
+      audioBuffer.copyToChannel(float32, 0);
 
-      setVoiceSharing(true);
-      console.log("Voice sharing started");
+      // Gapless streaming queue: schedule at the running play cursor.
+      const startAt = Math.max(
+        context.currentTime,
+        nextStartTimeRef.current || context.currentTime
+      );
+      const source = context.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(context.destination);
+      source.start(startAt);
+      nextStartTimeRef.current = startAt + audioBuffer.duration;
+
+      // Passive UI indicator: hide after 3s without a chunk.
+      setMicLive(true);
+      clearTimeout(micIndicatorTimeoutRef.current);
+      micIndicatorTimeoutRef.current = setTimeout(() => setMicLive(false), 3000);
     } catch (error) {
-      console.error("Voice share error:", error);
-      alert("Voice sharing was cancelled or blocked.");
+      console.error("Mic audio playback error:", error);
     }
-  };
+  }
 
-  const stopVoiceSharing = () => {
-    if (audioStreamRef.current) {
-      audioStreamRef.current.getTracks().forEach((track) => track.stop());
-      audioStreamRef.current = null;
-    }
+  function resetMicPlayback() {
+    audioContextRef.current?.close().catch(() => {});
+    audioContextRef.current = null;
+    nextStartTimeRef.current = 0;
+    clearTimeout(micIndicatorTimeoutRef.current);
+    micIndicatorTimeoutRef.current = null;
+    setMicLive(false);
+  }
 
-    if (audioPeerRef.current) {
-      audioPeerRef.current.close();
-      audioPeerRef.current = null;
-    }
-
-    setVoiceSharing(false);
-    console.log("Voice sharing stopped");
-  };
+  useEffect(() => () => resetMicPlayback(), []); // cleanup on unmount
 
   return (
     <div className="sender-page">
@@ -471,7 +443,12 @@ function Sender() {
             </div>
           </div>
           <div className="connection-status">
-            <span className={connected ? "big-status-dot connected" : "big-status-dot"} />
+            {micLive && (
+              <div className="mic-live-indicator" role="status">
+                🎧 Receiver's microphone is live
+              </div>
+            )}
+            <span className={connected ? "big-status-dot connected" : "big-status-dot" } />
             <div>
               <strong>{connected ? "Receiver connected" : "Waiting for receiver"}</strong>
               <p>{connected ? "You can now start screen sharing." : "Give the Session ID to another computer."}</p>
@@ -503,15 +480,6 @@ function Sender() {
           ) : (
             <button className="stop-button" onClick={stopSharing}>
               ■ Stop Screen Sharing
-            </button>
-          )}
-          {!voiceSharing ? (
-            <button className="voice-button" onClick={startVoiceSharing} disabled={!connected}>
-              🎙️ Start Voice Sharing
-            </button>
-          ) : (
-            <button className="voice-stop-button" onClick={stopVoiceSharing}>
-              ■ Stop Voice Sharing
             </button>
           )}
         </section>
